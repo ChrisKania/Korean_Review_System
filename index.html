@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Korean Review System</title>
+    <!-- Load API Client -->
+    <script src="js/api-client.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #8EBF91 0%, #455936 100%);
+            min-height: 100vh;
+            padding: 10px;
+            padding-bottom: 80px; /* Extra padding for mobile */
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+            margin-bottom: 60px; /* Extra margin for mobile */
+        }
+        
+        @media (min-width: 768px) {
+            body {
+                padding: 20px;
+                padding-bottom: 40px;
+            }
+            .container {
+                margin-bottom: 40px;
+            }
+        }
+        
+        .header {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .header h1 {
+            color: #455936;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .stats {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .stat-box {
+            flex: 1;
+            background: #f7f7f7;
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 80px;
+        }
+        
+        @media (min-width: 768px) {
+            .stats {
+                gap: 20px;
+            }
+            
+            .stat-box {
+                padding: 15px;
+            }
+        }
+        
+        .stat-number {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #8C3B3B;
+        }
+        
+        @media (min-width: 768px) {
+            .stat-number {
+                font-size: 2em;
+            }
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        
+        .nav-buttons {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .nav-btn {
+            flex: 1;
+            padding: 12px 8px;
+            background: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.9em;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+            min-width: 80px;
+        }
+        
+        @media (min-width: 768px) {
+            .nav-buttons {
+                gap: 10px;
+            }
+            
+            .nav-btn {
+                padding: 15px;
+                font-size: 1em;
+            }
+        }
+        
+        .nav-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+        
+        .nav-btn.active {
+            background: #8C3B3B;
+            color: white;
+        }
+        
+        .content-section {
+            display: none;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+        
+        .content-section.active {
+            display: block;
+        }
+        
+        .flashcard {
+            background: linear-gradient(135deg, #A68160 0%, #8C3B3B 100%);
+            color: white;
+            padding: 40px 20px;
+            border-radius: 15px;
+            text-align: center;
+            cursor: pointer;
+            min-height: 250px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.3s;
+            margin-bottom: 20px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        @media (min-width: 768px) {
+            .flashcard {
+                padding: 60px 40px;
+                min-height: 300px;
+            }
+        }
+        
+        .flashcard:hover {
+            transform: scale(1.02);
+        }
+        
+        .flashcard-front {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 20px;
+            word-wrap: break-word;
+            max-width: 100%;
+        }
+        
+        @media (min-width: 768px) {
+            .flashcard-front {
+                font-size: 3em;
+            }
+        }
+        
+        .flashcard-back {
+            font-size: 1.5em;
+        }
+        
+        .flashcard-hint {
+            font-size: 1em;
+            opacity: 0.8;
+            margin-top: 10px;
+        }
+        
+        .card-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .control-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.3s;
+            flex: 1;
+            min-width: 120px;
+        }
+        
+        @media (min-width: 768px) {
+            .card-controls {
+                gap: 15px;
+            }
+            
+            .control-btn {
+                padding: 15px 30px;
+                font-size: 1em;
+            }
+        }
+        
+        .btn-know {
+            background: #8EBF91;
+            color: white;
+        }
+        
+        .btn-difficult {
+            background: #8C3B3B;
+            color: white;
+        }
+        
+        .control-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .practice-item {
+            background: #f7f7f7;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .practice-korean {
+            font-size: 1.8em;
+            color: #455936;
+            margin-bottom: 10px;
+        }
+        
+        .practice-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            margin-bottom: 10px;
+        }
+        
+        .check-btn {
+            background: #8C3B3B;
+            color: white;
+            padding: 10px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        
+        .feedback {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        
+        .correct {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .incorrect {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .lesson-section {
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .lesson-header {
+            background: #455936;
+            color: white;
+            padding: 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.3s;
+        }
+        
+        .lesson-header:hover {
+            background: #5a6e47;
+        }
+        
+        .lesson-header h3 {
+            margin: 0;
+            color: white;
+        }
+        
+        .lesson-toggle {
+            font-size: 1.5em;
+            transition: transform 0.3s;
+        }
+        
+        .lesson-toggle.open {
+            transform: rotate(90deg);
+        }
+        
+        .lesson-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        
+        .lesson-content.open {
+            max-height: 4000px;
+            overflow-y: auto;
+        }
+        
+        .phrase-list {
+            list-style: none;
+        }
+        
+        .phrase-item {
+            background: #f7f7f7;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .phrase-content {
+            flex: 1;
+        }
+        
+        .play-btn {
+            background: #8C3B3B;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            font-size: 1.2em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            flex-shrink: 0;
+            margin-left: 15px;
+        }
+        
+        .play-btn:hover {
+            transform: scale(1.1);
+            background: #A65050;
+        }
+        
+        .phrase-korean {
+            font-size: 1.5em;
+            color: #8C3B3B;
+            margin-bottom: 5px;
+        }
+        
+        .phrase-romanization {
+            color: #999;
+            font-style: italic;
+            margin-bottom: 5px;
+        }
+        
+        .phrase-meaning {
+            color: #333;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #f0f0f0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #8EBF91 0%, #455936 100%);
+            transition: width 0.5s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .loading-message {
+            text-align: center;
+            padding: 40px;
+            color: #455936;
+            font-size: 1.2em;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Korean Review System</h1>
+            <p>Your daily practice companion</p>
+            <div class="stats">
+                <div class="stat-box">
+                    <div class="stat-number" id="cardsReviewed">0</div>
+                    <div class="stat-label">Cards Today</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="totalWords">-</div>
+                    <div class="stat-label">Total Words</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="accuracy">-</div>
+                    <div class="stat-label">Accuracy</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="nav-buttons">
+            <button class="nav-btn active" onclick="showSection('flashcards')">Flashcards</button>
+            <button class="nav-btn" onclick="showSection('practice')">Practice</button>
+            <button class="nav-btn" onclick="showSection('vocabulary')">Vocabulary</button>
+            <button class="nav-btn" onclick="showSection('settings')" title="Settings">⚙️</button>
+        </div>
+        
+        <div id="flashcards" class="content-section active">
+            <h2 style="margin-bottom: 20px;">Flashcard Review</h2>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressBar" style="width: 0%">0/0</div>
+            </div>
+            <div class="flashcard" id="flashcard">
+                <div id="cardContent">
+                    <div class="loading-message">Loading vocabulary...</div>
+                </div>
+            </div>
+            <div class="card-controls" id="cardControls" style="display: none;">
+                <button class="control-btn btn-know" onclick="nextCard('know')">✓ I know this</button>
+                <button class="control-btn btn-difficult" onclick="nextCard('difficult')">? Difficult</button>
+            </div>
+        </div>
+        
+        <div id="practice" class="content-section">
+            <h2 style="margin-bottom: 20px;">Speaking and Listening Practice</h2>
+            
+            <div class="practice-item">
+                <h3>Say it out loud</h3>
+                <div class="practice-korean">안녕하세요. 저는 [name] 입니다. 저는 영국에서 왔어요. 저는 VFX 아티스트예요. 가족이 두 명 있어요. 형제가 없어요. 만나서 반갑습니다!</div>
+                <p><strong>Meaning:</strong> Hello. I am [name]. I am from the UK. I am a VFX artist. I have 2 family members. I do not have siblings. Nice to meet you!</p>
+                <p style="color: #455936; margin-top: 10px;">Practice tip: Say your introduction 5 times smoothly!</p>
+            </div>
+            
+            <div class="practice-item">
+                <h3>Listen and Recognize</h3>
+                <p style="margin-bottom: 15px;">How do you say "I have family"?</p>
+                <button class="check-btn" onclick="playAudio('family')">Play Audio</button>
+                <input type="text" class="practice-input" id="listenInput" placeholder="Type in Hangul">
+                <button class="check-btn" onclick="checkListening()">Check Answer</button>
+                <div id="listenFeedback"></div>
+            </div>
+            
+            <div class="practice-item">
+                <h3>Role Play</h3>
+                <p><strong>Situation:</strong> Someone asks about your family</p>
+                <p style="margin-top: 10px; color: #455936;">
+                Person: 가족이 있어요?<br>
+                You: 네, 가족이 두 명 있어요.<br>
+                Person: 형제가 있어요?<br>
+                You: 아니요, 형제가 없어요.
+                </p>
+            </div>
+        </div>
+        
+        <div id="vocabulary" class="content-section">
+            <h2 style="margin-bottom: 20px;">Lessons 1-8 Vocabulary</h2>
+            
+            <h3>Progress Summary</h3>
+            <div id="progressSummary" style="margin-bottom: 20px; padding: 15px; background: #f0f0f0; border-radius: 10px;">
+                <p><strong>Total Cards:</strong> <span id="vocabTotalCards">-</span></p>
+                <p><strong>Mastered:</strong> <span id="masteredCount">0</span></p>
+                <p><strong>Need Practice:</strong> <span id="strugglingCount">0</span></p>
+            </div>
+            
+            <div id="vocabularyLessons">
+                <div class="loading-message">Loading vocabulary lessons...</div>
+            </div>
+        </div>
+        
+        <div id="settings" class="content-section">
+            <h2 style="margin-bottom: 20px;">Settings & Data Management</h2>
+            
+            <!-- ENHANCED OVERALL STATISTICS -->
+            <div style="background: linear-gradient(135deg, #8EBF91 0%, #455936 100%); padding: 25px; border-radius: 15px; margin-bottom: 20px; color: white;">
+                <h3 style="color: white; margin-bottom: 20px; font-size: 1.5em;">📊 Overall Statistics</h3>
+                
+                <!-- Main Progress Overview -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 25px;">
+                    <div style="background: rgba(255,255,255,0.15); padding: 15px; border-radius: 10px; text-align: center;">
+                        <div style="font-size: 2.5em; font-weight: bold;" id="totalWordsCount">-</div>
+                        <div style="font-size: 0.9em; opacity: 0.9;">Total Words</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.15); padding: 15px; border-radius: 10px; text-align: center;">
+                        <div style="font-size: 2.5em; font-weight: bold;" id="wordsStudiedCount">-</div>
+                        <div style="font-size: 0.9em; opacity: 0.9;">Words Studied</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.15); padding: 15px; border-radius: 10px; text-align: center;">
+                        <div style="font-size: 2.5em; font-weight: bold; color: #FFD700;" id="wordsMasteredCount">-</div>
+                        <div style="font-size: 0.9em; opacity: 0.9;">Words Mastered</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.15); padding: 15px; border-radius: 10px; text-align: center;">
+                        <div style="font-size: 2.5em; font-weight: bold;" id="overallAccuracy">-</div>
+                        <div style="font-size: 0.9em; opacity: 0.9;">Overall Accuracy</div>
+                    </div>
+                </div>
+                
+                <!-- Mastery Progress Bar -->
+                <div style="margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="font-weight: bold;">Mastery Progress</span>
+                        <span id="masteryPercentage">0%</span>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.2); height: 30px; border-radius: 15px; overflow: hidden;">
+                        <div id="masteryProgressBar" style="background: linear-gradient(90deg, #FFD700 0%, #FFA500 100%); height: 100%; width: 0%; transition: width 0.5s; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9em;"></div>
+                    </div>
+                    <p style="margin-top: 10px; font-size: 0.85em; opacity: 0.9;">Mastered = 3+ reviews with 80%+ accuracy</p>
+                </div>
+                
+                <!-- Study Stats -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                    <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
+                        <div style="font-size: 0.9em; opacity: 0.8; margin-bottom: 5px;">Total Reviews</div>
+                        <div style="font-size: 1.8em; font-weight: bold;" id="totalReviewsCount">-</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
+                        <div style="font-size: 0.9em; opacity: 0.8; margin-bottom: 5px;">Average Accuracy</div>
+                        <div style="font-size: 1.8em; font-weight: bold;" id="avgAccuracyRate">-</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
+                        <div style="font-size: 0.9em; opacity: 0.8; margin-bottom: 5px;">Study Days</div>
+                        <div style="font-size: 1.8em; font-weight: bold;" id="studyStreak">- days</div>
+                    </div>
+                </div>
+                
+                <!-- Learning Breakdown -->
+                <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
+                    <h4 style="margin-bottom: 15px; color: white;">Learning Breakdown</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px;">
+                        <div>
+                            <div style="font-size: 1.5em; font-weight: bold; color: #FFD700;" id="masteredBreakdown">-</div>
+                            <div style="font-size: 0.85em; opacity: 0.9;">Mastered ⭐</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 1.5em; font-weight: bold; color: #90EE90;" id="learningBreakdown">-</div>
+                            <div style="font-size: 0.85em; opacity: 0.9;">Learning 🌱</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 1.5em; font-weight: bold; color: #FFB6C1;" id="strugglingBreakdown">-</div>
+                            <div style="font-size: 0.85em; opacity: 0.9;">Struggling 😅</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 1.5em; font-weight: bold; color: #E0E0E0;" id="notStartedBreakdown">-</div>
+                            <div style="font-size: 0.85em; opacity: 0.9;">Not Started ⚪</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Lesson Progress -->
+            <div style="background: #f7f7f7; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                <h3 style="color: #455936; margin-bottom: 15px;">📚 Progress by Lesson</h3>
+                <div id="lessonProgressBars"></div>
+            </div>
+            
+            <!-- Recent Activity -->
+            <div style="background: #f7f7f7; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                <h3 style="color: #455936; margin-bottom: 15px;">🕐 Recent Activity</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <div>
+                        <div style="color: #666; font-size: 0.9em; margin-bottom: 5px;">Last Study Session</div>
+                        <div style="font-size: 1.3em; font-weight: bold; color: #455936;" id="lastStudyDate">-</div>
+                    </div>
+                    <div>
+                        <div style="color: #666; font-size: 0.9em; margin-bottom: 5px;">Reviewed Today</div>
+                        <div style="font-size: 1.3em; font-weight: bold; color: #8C3B3B;" id="reviewedToday">-</div>
+                    </div>
+                    <div>
+                        <div style="color: #666; font-size: 0.9em; margin-bottom: 5px;">This Week</div>
+                        <div style="font-size: 1.3em; font-weight: bold; color: #8EBF91;" id="reviewedThisWeek">-</div>
+                    </div>
+                    <div>
+                        <div style="color: #666; font-size: 0.9em; margin-bottom: 5px;">Days Studied</div>
+                        <div style="font-size: 1.3em; font-weight: bold; color: #A68160;" id="totalDaysStudied">-</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Database Sync Section -->
+            <div style="background: #e3f2fd; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                <h3 style="color: #1976d2; margin-bottom: 15px;">🔄 Database Sync</h3>
+                <p style="margin-bottom: 15px; color: #555;">
+                    Your statistics are loaded from the database automatically.
+                    Click to manually refresh if needed.
+                </p>
+                <button class="check-btn" onclick="refreshFromDatabase()" style="background: #1976d2;">
+                    🔄 Refresh from Database
+                </button>
+                <p style="margin-top: 10px; font-size: 0.9em; color: #666;">
+                    Last synced: <span id="lastSyncTime">On page load</span>
+                </p>
+            </div>
+            
+            <div style="background: #f7f7f7; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                <h3 style="color: #455936; margin-bottom: 15px;">💾 Backup Your Progress</h3>
+                <p style="margin-bottom: 15px; color: #666;">Export your learning progress to save it as a backup file. You can import it later to restore your progress.</p>
+                <button class="check-btn" onclick="exportProgress()" style="margin-right: 10px;">📥 Export Progress</button>
+                <p style="margin-top: 10px; font-size: 0.9em; color: #666;">Downloads a JSON file with all your card statistics</p>
+            </div>
+            
+            <div style="background: #f7f7f7; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                <h3 style="color: #455936; margin-bottom: 15px;">📤 Restore Your Progress</h3>
+                <p style="margin-bottom: 15px; color: #666;">Import a previously exported progress file to restore your learning data.</p>
+                <input type="file" id="importFile" accept=".json" style="margin-bottom: 10px;">
+                <button class="check-btn" onclick="importProgress()">📤 Import Progress</button>
+                <p style="margin-top: 10px; font-size: 0.9em; color: #666;">Select your exported JSON file</p>
+                <div id="importFeedback" style="margin-top: 10px;"></div>
+            </div>
+            
+            <div style="background: #fff3cd; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                <h3 style="color: #856404; margin-bottom: 15px;">⚠️ Reset All Progress</h3>
+                <p style="margin-bottom: 15px; color: #856404;">This will delete all your learning statistics and start fresh. This cannot be undone!</p>
+                <button class="check-btn" onclick="resetProgress()" style="background: #dc3545;">🗑️ Reset Everything</button>
+            </div>
+            
+            <div style="background: #f7f7f7; padding: 20px; border-radius: 10px;">
+                <h3 style="color: #455936; margin-bottom: 15px;">ℹ️ System Information</h3>
+                <p><strong>Total Cards in System:</strong> <span id="settingsTotalCards">-</span></p>
+                <p><strong>Cards You've Reviewed:</strong> <span id="settingsReviewedCards">0</span></p>
+                <p><strong>Cards You've Mastered:</strong> <span id="settingsMasteredCards">0</span></p>
+                <p><strong>Your Success Rate:</strong> <span id="settingsSuccessRate">0%</span></p>
+                <p style="margin-top: 10px; font-size: 0.9em; color: #666;"><strong>Device ID:</strong> <span id="deviceIdDisplay">-</span></p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Cards array - will be populated from API
+        let cards = [];
+        
+        let currentCard = 0;
+        let flipped = false;
+        let reviewedToday = 0;
+        let correctCount = 0;
+        let totalAttempts = 0;
+        let cardQueue = [];
+        let cardStats = {};
+        
+        function initStats() {
+            cards.forEach(c => {
+                if (!cardStats[c.id]) {
+                    cardStats[c.id] = {correct: 0, total: 0, lastReview: null, mastered: false};
+                }
+            });
+        }
+        
+        function updateStat(id, correct) {
+            if (!cardStats[id]) cardStats[id] = {correct: 0, total: 0, mastered: false};
+            cardStats[id].total++;
+            if (correct) cardStats[id].correct++;
+            cardStats[id].lastReview = Date.now();
+            if (cardStats[id].total >= 3 && cardStats[id].correct / cardStats[id].total >= 0.8) {
+                cardStats[id].mastered = true;
+            }
+            
+            // Save to database via API
+            api.updateProgress(id, correct).then(response => {
+                if (response.success) {
+                    console.log('✅ Progress saved to database');
+                } else {
+                    console.error('❌ Save failed:', response.message);
+                }
+            }).catch(err => {
+                console.error('Failed to save progress to server:', err);
+            });
+            
+            updateProgress();
+        }
+        
+        function updateProgress() {
+            const mastered = Object.values(cardStats).filter(s => s.mastered).length;
+            const struggling = Object.values(cardStats).filter(s => s.total >= 2 && s.correct / s.total < 0.5).length;
+            document.getElementById('masteredCount').textContent = mastered;
+            document.getElementById('strugglingCount').textContent = struggling;
+            document.getElementById('totalWords').textContent = cards.length;
+        }
+        
+        function initQueue() {
+            cardQueue = cards.filter(c => !cardStats[c.id] || !cardStats[c.id].mastered).map(c => ({...c}));
+            for (let i = cardQueue.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [cardQueue[i], cardQueue[j]] = [cardQueue[j], cardQueue[i]];
+            }
+            if (cardQueue.length > 0) {
+                loadCard();
+                document.getElementById('progressBar').style.width = '0%';
+                document.getElementById('progressBar').textContent = cardQueue.length + ' remaining';
+            } else {
+                document.getElementById('cardContent').innerHTML = '<div class="flashcard-front">All cards mastered!</div><div class="flashcard-hint">Great job! 🎉</div>';
+                document.getElementById('progressBar').style.width = '100%';
+                document.getElementById('progressBar').textContent = 'Complete!';
+            }
+        }
+        
+        function loadCard() {
+            if (currentCard >= cardQueue.length) return;
+            const c = cardQueue[currentCard];
+            document.getElementById('cardContent').innerHTML = '<div class="flashcard-front">' + c.front + '</div><div class="flashcard-hint">Click to reveal</div>';
+            document.getElementById('flashcard').onclick = flipCard;
+            document.getElementById('cardControls').style.display = 'none';
+        }
+        
+        function flipCard() {
+            if (!flipped && currentCard < cardQueue.length) {
+                const c = cardQueue[currentCard];
+                document.getElementById('cardContent').innerHTML = '<div class="flashcard-back">' + c.back + '</div><div class="flashcard-hint">' + c.hint + '</div>';
+                document.getElementById('cardControls').style.display = 'flex';
+                flipped = true;
+            }
+        }
+        
+        function nextCard(result) {
+            const c = cardQueue[currentCard];
+            
+            updateStat(c.id, result === 'know');
+            totalAttempts++;
+            if (result === 'know') {
+                correctCount++;
+                reviewedToday++;
+            } else if (result === 'difficult') {
+                const minPos = Math.min(currentCard + 3, cardQueue.length);
+                const maxPos = Math.min(currentCard + 8, cardQueue.length);
+                const randomPos = Math.floor(Math.random() * (maxPos - minPos + 1)) + minPos;
+                cardQueue.splice(randomPos, 0, {...c});
+            }
+            
+            document.getElementById('cardsReviewed').textContent = reviewedToday;
+            document.getElementById('accuracy').textContent = Math.round(correctCount / totalAttempts * 100) + '%';
+            currentCard++;
+            
+            const remainingCards = cardQueue.length - currentCard;
+            const progressPercent = Math.min((currentCard / cardQueue.length) * 100, 100);
+            document.getElementById('progressBar').style.width = progressPercent + '%';
+            document.getElementById('progressBar').textContent = remainingCards + ' remaining';
+            
+            if (currentCard >= cardQueue.length) {
+                document.getElementById('cardContent').innerHTML = '<div class="flashcard-front">Great work!</div><div class="flashcard-hint">Click to restart</div>';
+                document.getElementById('flashcard').onclick = () => {
+                    currentCard = 0;
+                    flipped = false;
+                    reviewedToday = 0;
+                    totalAttempts = 0;
+                    correctCount = 0;
+                    initQueue();
+                    const initialRemaining = cardQueue.length;
+                    document.getElementById('progressBar').style.width = '0%';
+                    document.getElementById('progressBar').textContent = initialRemaining + ' remaining';
+                    document.getElementById('cardsReviewed').textContent = '0';
+                    document.getElementById('accuracy').textContent = '-';
+                };
+                document.getElementById('cardControls').style.display = 'none';
+            } else {
+                flipped = false;
+                loadCard();
+            }
+        }
+        
+        function showSection(s) {
+            document.querySelectorAll('.content-section').forEach(e => e.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(e => e.classList.remove('active'));
+            document.getElementById(s).classList.add('active');
+            event.target.classList.add('active');
+            if (s === 'vocabulary') {
+                updateProgress();
+                loadVocabularyLessons();
+            }
+            if (s === 'settings') {
+                console.log('🔄 Refreshing statistics from database...');
+                loadProgressFromAPI().then(() => {
+                    updateSettingsStats();
+                    updateOverallStatistics();
+                });
+            }
+        }
+        
+        function updateSettingsStats() {
+            const totalReviewed = Object.values(cardStats).filter(s => s.total > 0).length;
+            const mastered = Object.values(cardStats).filter(s => s.mastered).length;
+            const totalCorrect = Object.values(cardStats).reduce((sum, s) => sum + s.correct, 0);
+            const totalAttempts = Object.values(cardStats).reduce((sum, s) => sum + s.total, 0);
+            const successRate = totalAttempts > 0 ? Math.round(totalCorrect / totalAttempts * 100) : 0;
+            
+            document.getElementById('settingsTotalCards').textContent = cards.length;
+            document.getElementById('settingsReviewedCards').textContent = totalReviewed;
+            document.getElementById('settingsMasteredCards').textContent = mastered;
+            document.getElementById('settingsSuccessRate').textContent = successRate + '%';
+            document.getElementById('deviceIdDisplay').textContent = api.deviceId;
+            
+            updateOverallStatistics();
+        }
+        
+        // NEW: Load progress from database
+        async function loadProgressFromAPI() {
+            console.log('📥 Loading progress from database...');
+            try {
+                const response = await api.getProgress();
+                if (response.success && response.data) {
+                    let loadedCount = 0;
+                    for (const [wordId, progress] of Object.entries(response.data)) {
+                        cardStats[wordId] = {
+                            correct: progress.correct || 0,
+                            total: progress.total || 0,
+                            mastered: progress.mastered || false,
+                            lastReview: progress.lastReview ? new Date(progress.lastReview).getTime() : null
+                        };
+                        loadedCount++;
+                    }
+                    console.log(`✅ Loaded progress for ${loadedCount} words from database`);
+                    updateLastSyncTime();
+                    return true;
+                } else {
+                    console.log('ℹ️ No progress in database yet');
+                    return false;
+                }
+            } catch (error) {
+                console.error('❌ Failed to load progress from database:', error);
+                return false;
+            }
+        }
+        
+        // NEW: Update overall statistics
+        function updateOverallStatistics() {
+            console.log('📊 Updating overall statistics...');
+            
+            const totalWords = cards.length;
+            const wordsStudied = Object.keys(cardStats).filter(id => cardStats[id].total > 0).length;
+            const wordsMastered = Object.values(cardStats).filter(s => s.mastered).length;
+            const wordsLearning = Object.values(cardStats).filter(s => !s.mastered && s.total > 0 && s.total < 3).length;
+            const wordsStruggling = Object.values(cardStats).filter(s => !s.mastered && s.total >= 2 && s.correct / s.total < 0.5).length;
+            const wordsNotStarted = totalWords - wordsStudied;
+            
+            const totalCorrect = Object.values(cardStats).reduce((sum, s) => sum + s.correct, 0);
+            const totalAttempts = Object.values(cardStats).reduce((sum, s) => sum + s.total, 0);
+            const overallAccuracy = totalAttempts > 0 ? Math.round((totalCorrect / totalAttempts) * 100) : 0;
+            
+            const masteryPercent = totalWords > 0 ? Math.round((wordsMastered / totalWords) * 100) : 0;
+            
+            const studyDates = Object.values(cardStats)
+                .filter(s => s.lastReview)
+                .map(s => new Date(s.lastReview).toDateString());
+            const uniqueDays = [...new Set(studyDates)].length;
+            
+            const lastReviewTimestamp = Math.max(...Object.values(cardStats)
+                .filter(s => s.lastReview)
+                .map(s => s.lastReview), 0);
+            const lastStudyDate = lastReviewTimestamp ? new Date(lastReviewTimestamp).toLocaleDateString() : 'Never';
+            
+            const today = new Date().toDateString();
+            const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+            
+            const reviewedToday = Object.values(cardStats).filter(s => 
+                s.lastReview && new Date(s.lastReview).toDateString() === today
+            ).length;
+            
+            const reviewedThisWeek = Object.values(cardStats).filter(s => 
+                s.lastReview && new Date(s.lastReview) >= oneWeekAgo
+            ).length;
+            
+            document.getElementById('totalWordsCount').textContent = totalWords;
+            document.getElementById('wordsStudiedCount').textContent = wordsStudied;
+            document.getElementById('wordsMasteredCount').textContent = wordsMastered;
+            document.getElementById('overallAccuracy').textContent = overallAccuracy + '%';
+            
+            document.getElementById('masteryPercentage').textContent = masteryPercent + '%';
+            document.getElementById('masteryProgressBar').style.width = masteryPercent + '%';
+            document.getElementById('masteryProgressBar').textContent = masteryPercent > 10 ? masteryPercent + '%' : '';
+            
+            document.getElementById('totalReviewsCount').textContent = totalAttempts;
+            document.getElementById('avgAccuracyRate').textContent = overallAccuracy + '%';
+            document.getElementById('studyStreak').textContent = uniqueDays + ' days';
+            
+            document.getElementById('masteredBreakdown').textContent = wordsMastered;
+            document.getElementById('learningBreakdown').textContent = wordsLearning;
+            document.getElementById('strugglingBreakdown').textContent = wordsStruggling;
+            document.getElementById('notStartedBreakdown').textContent = wordsNotStarted;
+            
+            document.getElementById('lastStudyDate').textContent = lastStudyDate;
+            document.getElementById('reviewedToday').textContent = reviewedToday + ' words';
+            document.getElementById('reviewedThisWeek').textContent = reviewedThisWeek + ' words';
+            document.getElementById('totalDaysStudied').textContent = uniqueDays;
+            
+            updateLessonProgressBars();
+        }
+        
+        // NEW: Update lesson progress bars
+        async function updateLessonProgressBars() {
+            const container = document.getElementById('lessonProgressBars');
+            if (!container) return;
+            
+            try {
+                const lessonsResponse = await api.getLessons();
+                if (!lessonsResponse.success) return;
+                
+                const lessons = lessonsResponse.data;
+                let html = '';
+                
+                for (const lesson of lessons) {
+                    const vocabResponse = await api.getVocabularyByLesson(lesson.id);
+                    const vocabulary = vocabResponse.success ? vocabResponse.data : [];
+                    
+                    const masteredInLesson = vocabulary.filter(word => 
+                        cardStats[word.id] && cardStats[word.id].mastered
+                    ).length;
+                    
+                    const totalInLesson = vocabulary.length;
+                    const percentComplete = totalInLesson > 0 ? Math.round((masteredInLesson / totalInLesson) * 100) : 0;
+                    
+                    let barColor = '#E0E0E0';
+                    if (percentComplete > 0 && percentComplete < 50) {
+                        barColor = '#FFB6C1';
+                    } else if (percentComplete >= 50 && percentComplete < 100) {
+                        barColor = '#90EE90';
+                    } else if (percentComplete === 100) {
+                        barColor = '#FFD700';
+                    }
+                    
+                    html += `
+                        <div style="margin-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                <span style="font-weight: 500; color: #455936;">Lesson ${lesson.id}: ${lesson.title}</span>
+                                <span style="color: #666;">${masteredInLesson}/${totalInLesson} (${percentComplete}%)</span>
+                            </div>
+                            <div style="background: #E0E0E0; height: 20px; border-radius: 10px; overflow: hidden;">
+                                <div style="background: ${barColor}; height: 100%; width: ${percentComplete}%; transition: width 0.5s;"></div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Failed to update lesson progress:', error);
+            }
+        }
+        
+        // NEW: Refresh from database button
+        function refreshFromDatabase() {
+            console.log('🔄 Manual refresh requested...');
+            showNotification('🔄 Refreshing from database...', 'info');
+            
+            loadProgressFromAPI().then((success) => {
+                if (success) {
+                    updateProgress();
+                    updateOverallStatistics();
+                    updateSettingsStats();
+                    showNotification('✅ Statistics refreshed!', 'success');
+                } else {
+                    showNotification('⚠️ No progress in database yet', 'warning');
+                }
+            });
+        }
+        
+        // NEW: Show notification
+        function showNotification(message, type = 'info') {
+            let notification = document.getElementById('globalNotification');
+            if (!notification) {
+                notification = document.createElement('div');
+                notification.id = 'globalNotification';
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    padding: 15px 25px;
+                    border-radius: 8px;
+                    color: white;
+                    font-weight: bold;
+                    z-index: 10000;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                    opacity: 0;
+                    transition: opacity 0.3s;
+                `;
+                document.body.appendChild(notification);
+            }
+            
+            const colors = {
+                success: '#28a745',
+                error: '#dc3545',
+                warning: '#ffc107',
+                info: '#007bff'
+            };
+            notification.style.background = colors[type] || colors.info;
+            notification.textContent = message;
+            notification.style.opacity = '1';
+            
+            setTimeout(() => {
+                notification.style.opacity = '0';
+            }, 3000);
+        }
+        
+        // NEW: Update last sync time
+        function updateLastSyncTime() {
+            const timeElement = document.getElementById('lastSyncTime');
+            if (timeElement) {
+                const now = new Date();
+                timeElement.textContent = now.toLocaleTimeString();
+            }
+        }
+        
+        async function exportProgress() {
+            try {
+                const exportData = await api.exportProgress();
+                const blob = new Blob([JSON.stringify(exportData, null, 2)], {type: 'application/json'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'korean-learning-progress-' + new Date().toISOString().split('T')[0] + '.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                alert('Progress exported successfully!');
+            } catch (error) {
+                console.error('Export failed:', error);
+                alert('Failed to export progress: ' + error.message);
+            }
+        }
+        
+        async function importProgress() {
+            const file = document.getElementById('importFile').files[0];
+            if (!file) {
+                document.getElementById('importFeedback').innerHTML = '<p style="color:#dc3545;">Please select a file first</p>';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    await api.importProgress(data);
+                    
+                    await loadProgressFromAPI();
+                    updateProgress();
+                    updateSettingsStats();
+                    initQueue();
+                    
+                    document.getElementById('importFeedback').innerHTML = '<p style="color:#28a745;">✓ Progress imported successfully!</p>';
+                } catch (err) {
+                    console.error('Import failed:', err);
+                    document.getElementById('importFeedback').innerHTML = '<p style="color:#dc3545;">Error: ' + err.message + '</p>';
+                }
+            };
+            reader.readAsText(file);
+        }
+        
+        function resetProgress() {
+            if (confirm('Are you sure you want to delete all your progress? This cannot be undone!')) {
+                if (confirm('Really sure? All your mastered cards and statistics will be lost!')) {
+                    cardStats = {};
+                    localStorage.removeItem('koreanCardStats');
+                    initStats();
+                    updateProgress();
+                    updateSettingsStats();
+                    initQueue();
+                    alert('All progress has been reset');
+                }
+            }
+        }
+        
+        function playAudio() {
+            try {
+                const u = new SpeechSynthesisUtterance('가족이 있어요');
+                u.lang = 'ko-KR';
+                u.rate = 0.8;
+                speechSynthesis.speak(u);
+            } catch (e) {
+                console.error('Speech synthesis failed:', e);
+            }
+        }
+        
+        function playWord(w) {
+            try {
+                const u = new SpeechSynthesisUtterance(w);
+                u.lang = 'ko-KR';
+                u.rate = 0.8;
+                speechSynthesis.speak(u);
+            } catch (e) {
+                console.error('Speech synthesis failed:', e);
+            }
+        }
+        
+        function checkListening() {
+            const i = document.getElementById('listenInput').value.trim();
+            const f = document.getElementById('listenFeedback');
+            if (i === '가족이 있어요' || i === '가족이 있어요.') {
+                f.className = 'feedback correct';
+                f.textContent = 'Correct!';
+            } else if (i === '') {
+                f.className = 'feedback';
+                f.textContent = 'Please type your answer';
+            } else {
+                f.className = 'feedback incorrect';
+                f.textContent = 'Not quite. Answer: 가족이 있어요';
+            }
+        }
+        
+        async function loadVocabularyLessons() {
+            const container = document.getElementById('vocabularyLessons');
+            
+            try {
+                const response = await api.getLessons();
+                
+                if (!response.success || !response.data) {
+                    container.innerHTML = '<div class="error-message">Failed to load lessons</div>';
+                    return;
+                }
+                
+                const lessons = response.data;
+                let html = '';
+                
+                for (const lesson of lessons) {
+                    const vocabResponse = await api.getVocabularyByLesson(lesson.id);
+                    const vocabulary = vocabResponse.success ? vocabResponse.data : [];
+                    
+                    html += `
+                        <div class="lesson-section">
+                            <div class="lesson-header" onclick="toggleLesson(${lesson.id})">
+                                <h3>Lesson ${lesson.id}: ${lesson.title}</h3>
+                                <span class="lesson-toggle" id="toggle${lesson.id}">▶</span>
+                            </div>
+                            <div class="lesson-content" id="lesson${lesson.id}">
+                                <ul class="phrase-list" style="padding: 15px;">
+                    `;
+                    
+                    vocabulary.forEach(word => {
+                        html += `
+                            <li class="phrase-item">
+                                <div class="phrase-content">
+                                    <div class="phrase-korean">${word.korean}</div>
+                                    <div class="phrase-romanization">${word.romanization}</div>
+                                    <div class="phrase-meaning">${word.meaning}</div>
+                                </div>
+                                <button class="play-btn" onclick="playWord('${word.korean}')">▶</button>
+                            </li>
+                        `;
+                    });
+                    
+                    html += `
+                                </ul>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                container.innerHTML = html;
+                
+            } catch (error) {
+                console.error('Failed to load vocabulary lessons:', error);
+                container.innerHTML = '<div class="error-message">Error loading lessons: ' + error.message + '</div>';
+            }
+        }
+        
+        function toggleLesson(n) {
+            const content = document.getElementById('lesson' + n);
+            const toggle = document.getElementById('toggle' + n);
+            if (content.classList.contains('open')) {
+                content.classList.remove('open');
+                toggle.classList.remove('open');
+            } else {
+                content.classList.add('open');
+                toggle.classList.add('open');
+            }
+        }
+        
+        // Main initialization - UPDATED WITH DATABASE LOADING
+        window.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 Korean Learning System starting...');
+            console.log('📱 Device ID:', api.deviceId);
+            
+            try {
+                console.log('📚 Loading vocabulary from database...');
+                const response = await api.getAllVocabulary();
+                
+                if (response.success && response.data) {
+                    cards = response.data.map(v => ({
+                        front: v.korean,
+                        back: v.meaning,
+                        hint: v.romanization,
+                        id: v.id
+                    }));
+                    console.log(`✅ Loaded ${cards.length} cards from API`);
+                    
+                    document.getElementById('totalWords').textContent = cards.length;
+                    document.getElementById('vocabTotalCards').textContent = cards.length;
+                    
+                    // Initialize empty stats structure
+                    initStats();
+                    
+                    // CRITICAL: Load actual progress from database
+                    console.log('💾 Loading your progress from database...');
+                    await loadProgressFromAPI();
+                    
+                    // Now initialize with real data
+                    initQueue();
+                    updateProgress();
+                    
+                    // Calculate statistics with database data
+                    console.log('📊 Calculating statistics from database...');
+                    updateOverallStatistics();
+                    
+                    if (cardQueue.length > 0) {
+                        document.getElementById('progressBar').textContent = cardQueue.length + ' remaining';
+                    }
+                    
+                    console.log('✅ System ready with database progress loaded!');
+                } else {
+                    throw new Error('Invalid API response');
+                }
+            } catch (error) {
+                console.error('❌ Failed to load vocabulary:', error);
+                document.getElementById('cardContent').innerHTML = `
+                    <div class="error-message">
+                        <h3>Failed to Load Vocabulary</h3>
+                        <p>Could not connect to the database. Please check:</p>
+                        <ul style="text-align: left; margin: 10px 0;">
+                            <li>Your internet connection</li>
+                            <li>API is configured correctly (visit /api/test.php)</li>
+                            <li>Database credentials in config.php</li>
+                        </ul>
+                        <button class="check-btn" onclick="location.reload()">Try Again</button>
+                    </div>
+                `;
+            }
+        });
+        
+        // Auto-sync from database every 5 minutes
+        setInterval(async () => {
+            console.log('🔄 Auto-syncing from database...');
+            await loadProgressFromAPI();
+            updateProgress();
+            updateOverallStatistics();
+        }, 5 * 60 * 1000);
+    </script>
+</body>
+</html>

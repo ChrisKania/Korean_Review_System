@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Data Diagnostics</title>
+    <script src="js/api-client.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .success { color: #28a745; font-weight: bold; }
+        .error { color: #dc3545; font-weight: bold; }
+        .info { color: #007bff; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>🔍 API Data Diagnostics</h1>
+    <p>This page will help diagnose what data your API is returning.</p>
+
+    <div class="section">
+        <h2>Your Device ID</h2>
+        <p id="deviceIdDisplay">Loading...</p>
+    </div>
+
+    <div class="section">
+        <h2>Test 1: Check Progress API Response</h2>
+        <button onclick="checkProgressAPI()">Run Test</button>
+        <div id="progressResult"></div>
+    </div>
+
+    <div class="section">
+        <h2>Test 2: Check Vocabulary API Response</h2>
+        <button onclick="checkVocabularyAPI()">Run Test</button>
+        <div id="vocabularyResult"></div>
+    </div>
+
+    <div class="section">
+        <h2>Test 3: Check Stats API Response</h2>
+        <button onclick="checkStatsAPI()">Run Test</button>
+        <div id="statsResult"></div>
+    </div>
+
+    <div class="section">
+        <h2>Test 4: Direct Database Check</h2>
+        <p>Open this URL in a new tab to see raw database data:</p>
+        <a href="/korean/api/progress.php" target="_blank">/korean/api/progress.php</a>
+    </div>
+
+    <script>
+        // Display device ID
+        document.getElementById('deviceIdDisplay').innerHTML = 
+            `<code>${api.deviceId}</code>`;
+
+        async function checkProgressAPI() {
+            const resultDiv = document.getElementById('progressResult');
+            resultDiv.innerHTML = '<p class="info">Loading...</p>';
+            
+            try {
+                console.log('📞 Calling api.getProgress()...');
+                const response = await api.getProgress();
+                
+                console.log('📦 Raw response:', response);
+                
+                let html = '<h3>Response received:</h3>';
+                html += `<p><strong>Success:</strong> ${response.success}</p>`;
+                html += `<p><strong>Message:</strong> ${response.message || 'N/A'}</p>`;
+                
+                if (response.data) {
+                    html += '<h4>Data Structure:</h4>';
+                    html += `<p><strong>Type:</strong> ${Array.isArray(response.data) ? 'Array' : 'Object'}</p>`;
+                    
+                    if (Array.isArray(response.data)) {
+                        html += `<p><strong>Length:</strong> ${response.data.length}</p>`;
+                        html += '<h4>Sample items (first 3):</h4>';
+                        html += '<pre>' + JSON.stringify(response.data.slice(0, 3), null, 2) + '</pre>';
+                    } else {
+                        html += `<p><strong>Keys count:</strong> ${Object.keys(response.data).length}</p>`;
+                        html += '<h4>Sample entries (first 3):</h4>';
+                        const entries = Object.entries(response.data).slice(0, 3);
+                        html += '<pre>' + JSON.stringify(Object.fromEntries(entries), null, 2) + '</pre>';
+                    }
+                    
+                    html += '<h4>Full data:</h4>';
+                    html += '<pre>' + JSON.stringify(response.data, null, 2) + '</pre>';
+                } else {
+                    html += '<p class="error">❌ No data returned</p>';
+                }
+                
+                resultDiv.innerHTML = html;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+                console.error('Error:', error);
+            }
+        }
+
+        async function checkVocabularyAPI() {
+            const resultDiv = document.getElementById('vocabularyResult');
+            resultDiv.innerHTML = '<p class="info">Loading...</p>';
+            
+            try {
+                const response = await api.getAllVocabulary();
+                
+                let html = '<h3>Vocabulary Response:</h3>';
+                html += `<p><strong>Success:</strong> ${response.success}</p>`;
+                
+                if (response.data && Array.isArray(response.data)) {
+                    html += `<p class="success">✅ Found ${response.data.length} vocabulary items</p>`;
+                    html += '<h4>Sample words (first 3):</h4>';
+                    html += '<pre>' + JSON.stringify(response.data.slice(0, 3), null, 2) + '</pre>';
+                    
+                    html += '<h4>Word IDs in system:</h4>';
+                    const ids = response.data.map(v => v.id);
+                    html += `<p>${ids.join(', ')}</p>`;
+                } else {
+                    html += '<p class="error">❌ Invalid vocabulary data</p>';
+                }
+                
+                resultDiv.innerHTML = html;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+            }
+        }
+
+        async function checkStatsAPI() {
+            const resultDiv = document.getElementById('statsResult');
+            resultDiv.innerHTML = '<p class="info">Loading...</p>';
+            
+            try {
+                const response = await fetch('/korean/api/progress.php?action=stats', {
+                    headers: {
+                        'X-Device-ID': api.deviceId
+                    }
+                });
+                
+                const data = await response.json();
+                
+                let html = '<h3>Stats Response:</h3>';
+                html += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                
+                resultDiv.innerHTML = html;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

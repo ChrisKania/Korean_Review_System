@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Connection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-box {
+            background: white;
+            padding: 25px;
+            margin: 20px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .pass { background: #d4edda; color: #155724; }
+        .fail { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1em;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: bold;
+        }
+        .code {
+            background: #f8f9fa;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Database Connection Test</h1>
+    <p>This page checks if your statistics are properly connected to the database.</p>
+    
+    <div class="test-box">
+        <h2>Test 1: Check Database</h2>
+        <p>First, let's see what's actually in your database.</p>
+        <button onclick="checkDatabase()">🗄️ Check Database</button>
+        <div id="dbResult"></div>
+    </div>
+    
+    <div class="test-box">
+        <h2>Test 2: Check Local Statistics</h2>
+        <p>Now let's see what your app thinks your statistics are.</p>
+        <button onclick="checkLocalStats()">📊 Check App Statistics</button>
+        <div id="localResult"></div>
+    </div>
+    
+    <div class="test-box">
+        <h2>Test 3: Compare Results</h2>
+        <p>Do they match?</p>
+        <button onclick="compareResults()">⚖️ Compare</button>
+        <div id="compareResult"></div>
+    </div>
+    
+    <div class="test-box">
+        <h2>Quick Fix Test</h2>
+        <p>Try loading progress from database and see if stats update.</p>
+        <button onclick="testFix()">🔧 Test Fix</button>
+        <div id="fixResult"></div>
+    </div>
+
+    <script src="js/api-client.js"></script>
+    <script>
+        let dbData = null;
+        let localData = null;
+        
+        async function checkDatabase() {
+            const result = document.getElementById('dbResult');
+            result.innerHTML = '<p>Checking database...</p>';
+            
+            try {
+                const response = await api.getProgress();
+                
+                if (response.success && response.data) {
+                    const wordsInDB = Object.keys(response.data).length;
+                    const masteredInDB = Object.values(response.data).filter(p => p.mastered).length;
+                    const totalReviews = Object.values(response.data).reduce((sum, p) => sum + p.total, 0);
+                    const totalCorrect = Object.values(response.data).reduce((sum, p) => sum + p.correct, 0);
+                    const accuracyDB = totalReviews > 0 ? Math.round((totalCorrect / totalReviews) * 100) : 0;
+                    
+                    dbData = {
+                        wordsStudied: wordsInDB,
+                        wordsMastered: masteredInDB,
+                        totalReviews: totalReviews,
+                        accuracy: accuracyDB
+                    };
+                    
+                    result.innerHTML = `
+                        <div class="status pass">✅ Database Connected</div>
+                        <table>
+                            <tr><th>Metric</th><th>Value</th></tr>
+                            <tr><td>Words in Database</td><td><strong>${wordsInDB}</strong></td></tr>
+                            <tr><td>Words Mastered</td><td><strong>${masteredInDB}</strong></td></tr>
+                            <tr><td>Total Reviews</td><td><strong>${totalReviews}</strong></td></tr>
+                            <tr><td>Accuracy</td><td><strong>${accuracyDB}%</strong></td></tr>
+                        </table>
+                        <p style="margin-top: 15px; color: #666;">
+                            <strong>Device ID:</strong> <span class="code">${api.deviceId}</span>
+                        </p>
+                    `;
+                } else {
+                    result.innerHTML = `
+                        <div class="status warning">⚠️ No progress in database yet</div>
+                        <p>This is normal if you haven't reviewed any cards yet.</p>
+                    `;
+                }
+            } catch (error) {
+                result.innerHTML = `
+                    <div class="status fail">❌ Database Error</div>
+                    <p>${error.message}</p>
+                `;
+            }
+        }
+        
+        async function checkLocalStats() {
+            const result = document.getElementById('localResult');
+            result.innerHTML = '<p>Checking local statistics...</p>';
+            
+            // Check if cardStats exists (would be set by main app)
+            if (typeof cardStats === 'undefined') {
+                result.innerHTML = `
+                    <div class="status warning">⚠️ cardStats not found</div>
+                    <p>This test page doesn't have access to your main app's cardStats object.</p>
+                    <p><strong>Instructions:</strong></p>
+                    <ol>
+                        <li>Open your main Korean learning app</li>
+                        <li>Open browser console (F12)</li>
+                        <li>Type: <span class="code">Object.keys(cardStats).filter(id => cardStats[id].total > 0).length</span></li>
+                        <li>This shows how many words are in your local stats</li>
+                    </ol>
+                `;
+                return;
+            }
+            
+            const wordsLocal = Object.keys(cardStats).filter(id => cardStats[id].total > 0).length;
+            const masteredLocal = Object.values(cardStats).filter(s => s.mastered).length;
+            const totalReviewsLocal = Object.values(cardStats).reduce((sum, s) => sum + s.total, 0);
+            const totalCorrectLocal = Object.values(cardStats).reduce((sum, s) => sum + s.correct, 0);
+            const accuracyLocal = totalReviewsLocal > 0 ? Math.round((totalCorrectLocal / totalReviewsLocal) * 100) : 0;
+            
+            localData = {
+                wordsStudied: wordsLocal,
+                wordsMastered: masteredLocal,
+                totalReviews: totalReviewsLocal,
+                accuracy: accuracyLocal
+            };
+            
+            result.innerHTML = `
+                <div class="status pass">✅ Local Statistics Found</div>
+                <table>
+                    <tr><th>Metric</th><th>Value</th></tr>
+                    <tr><td>Words Studied (Local)</td><td><strong>${wordsLocal}</strong></td></tr>
+                    <tr><td>Words Mastered (Local)</td><td><strong>${masteredLocal}</strong></td></tr>
+                    <tr><td>Total Reviews (Local)</td><td><strong>${totalReviewsLocal}</strong></td></tr>
+                    <tr><td>Accuracy (Local)</td><td><strong>${accuracyLocal}%</strong></td></tr>
+                </table>
+            `;
+        }
+        
+        function compareResults() {
+            const result = document.getElementById('compareResult');
+            
+            if (!dbData) {
+                result.innerHTML = '<div class="status warning">⚠️ Please run Test 1 first</div>';
+                return;
+            }
+            
+            // For test page, we can't access cardStats, so we provide instructions
+            result.innerHTML = `
+                <div class="status warning">📋 Manual Comparison Needed</div>
+                <h3>To check if stats match database:</h3>
+                <ol style="text-align: left; line-height: 1.8;">
+                    <li>Open your main Korean learning app in a new tab</li>
+                    <li>Go to the <strong>Settings</strong> tab</li>
+                    <li>Look at the statistics shown there</li>
+                    <li>Compare with database values below:</li>
+                </ol>
+                
+                <table style="margin-top: 20px;">
+                    <tr>
+                        <th>Metric</th>
+                        <th>Database Has</th>
+                        <th>App Should Show</th>
+                    </tr>
+                    <tr>
+                        <td>Words Studied</td>
+                        <td><strong>${dbData.wordsStudied}</strong></td>
+                        <td>Same number? <input type="checkbox" id="check1"></td>
+                    </tr>
+                    <tr>
+                        <td>Words Mastered</td>
+                        <td><strong>${dbData.wordsMastered}</strong></td>
+                        <td>Same number? <input type="checkbox" id="check2"></td>
+                    </tr>
+                    <tr>
+                        <td>Total Reviews</td>
+                        <td><strong>${dbData.totalReviews}</strong></td>
+                        <td>Same number? <input type="checkbox" id="check3"></td>
+                    </tr>
+                    <tr>
+                        <td>Accuracy</td>
+                        <td><strong>${dbData.accuracy}%</strong></td>
+                        <td>Same number? <input type="checkbox" id="check4"></td>
+                    </tr>
+                </table>
+                
+                <div style="margin-top: 20px; padding: 15px; background: #e3f2fd; border-radius: 8px;">
+                    <h4>Results:</h4>
+                    <p><strong>✅ All boxes checked?</strong> Statistics ARE connected to database!</p>
+                    <p><strong>❌ Numbers don't match?</strong> Statistics are NOT connected - apply the fix!</p>
+                </div>
+                
+                <h3 style="margin-top: 30px;">Quick Test:</h3>
+                <ol style="text-align: left; line-height: 1.8;">
+                    <li>In your main app, review 3 flashcards</li>
+                    <li>Go to Settings - note the numbers</li>
+                    <li>Refresh the page (F5)</li>
+                    <li>Go to Settings again</li>
+                    <li><strong>If numbers are the same:</strong> ✅ Connected!</li>
+                    <li><strong>If numbers reset to 0 or changed:</strong> ❌ Not connected!</li>
+                </ol>
+            `;
+        }
+        
+        async function testFix() {
+            const result = document.getElementById('fixResult');
+            result.innerHTML = '<p>Testing fix...</p>';
+            
+            try {
+                // Simulate loading from database
+                const response = await api.getProgress();
+                
+                if (response.success && response.data) {
+                    const count = Object.keys(response.data).length;
+                    
+                    result.innerHTML = `
+                        <div class="status pass">✅ Can Load from Database</div>
+                        <p>Successfully loaded progress for <strong>${count} words</strong> from database.</p>
+                        
+                        <h3>To fix your main app:</h3>
+                        <ol style="text-align: left; line-height: 1.8;">
+                            <li>Add this function to your JavaScript:
+                                <pre style="background: #f8f9fa; padding: 15px; border-radius: 8px; overflow-x: auto; margin: 10px 0;">
+async function loadProgressFromAPI() {
+    const response = await api.getProgress();
+    if (response.success && response.data) {
+        cardStats = {};
+        for (const [wordId, progress] of Object.entries(response.data)) {
+            cardStats[wordId] = {
+                correct: progress.correct || 0,
+                total: progress.total || 0,
+                mastered: progress.mastered || false,
+                lastReview: progress.lastReview ? new Date(progress.lastReview).getTime() : null
+            };
+        }
+        console.log('✅ Loaded progress from database');
+    }
+}</pre>
+                            </li>
+                            <li>In your <span class="code">DOMContentLoaded</span> event, add:
+                                <pre style="background: #f8f9fa; padding: 15px; border-radius: 8px; overflow-x: auto; margin: 10px 0;">
+// After initStats()
+await loadProgressFromAPI();
+// Then updateOverallStatistics()</pre>
+                            </li>
+                            <li>Save and upload your index.html</li>
+                            <li>Refresh your app and check statistics</li>
+                        </ol>
+                        
+                        <p style="margin-top: 20px; padding: 15px; background: #d4edda; border-radius: 8px;">
+                            <strong>📄 See the complete fix in:</strong><br>
+                            <code>database-connected-statistics.js</code><br>
+                            <code>DATABASE-CONNECTION-FIX-GUIDE.md</code>
+                        </p>
+                    `;
+                } else {
+                    result.innerHTML = `
+                        <div class="status warning">⚠️ No progress in database</div>
+                        <p>Database connection works, but no progress saved yet.</p>
+                        <p>Review some flashcards first, then test again.</p>
+                    `;
+                }
+            } catch (error) {
+                result.innerHTML = `
+                    <div class="status fail">❌ Error</div>
+                    <p>${error.message}</p>
+                `;
+            }
+        }
+        
+        // Auto-run database check on load
+        setTimeout(checkDatabase, 500);
+    </script>
+</body>
+</html>
