@@ -602,6 +602,13 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Review Schedule -->
+            <div id="scheduleStats" style="background: #f7f7f7; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                <div style="text-align: center; color: #999;">
+                    <p>Loading schedule...</p>
+                </div>
+            </div>
             
             <!-- Lesson Progress -->
             <div style="background: #f7f7f7; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
@@ -630,6 +637,17 @@
                         <div style="font-size: 1.3em; font-weight: bold; color: #A68160;" id="totalDaysStudied">-</div>
                     </div>
                 </div>
+            </div>
+            
+            <!-- Practice Mastered Cards -->
+            <div style="background: #e7f3ff; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                <h3>🏆 Practice Mastered Cards</h3>
+                <p style="margin: 10px 0;">
+                    Want to keep mastered cards fresh? Practice them even though they're not due yet.
+                </p>
+                <button class="check-btn" onclick="practiceMasteredCards()" style="background: #007bff;">
+                    🔄 Practice Mastered Cards
+                </button>
             </div>
             
             <!-- Database Sync Section -->
@@ -731,20 +749,63 @@
             document.getElementById('totalWords').textContent = cards.length;
         }
         
-        function initQueue() {
-            cardQueue = cards.filter(c => !cardStats[c.id] || !cardStats[c.id].mastered).map(c => ({...c}));
-            for (let i = cardQueue.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [cardQueue[i], cardQueue[j]] = [cardQueue[j], cardQueue[i]];
-            }
-            if (cardQueue.length > 0) {
-                loadCard();
-                document.getElementById('progressBar').style.width = '0%';
-                document.getElementById('progressBar').textContent = cardQueue.length + ' remaining';
-            } else {
-                document.getElementById('cardContent').innerHTML = '<div class="flashcard-front">All cards mastered!</div><div class="flashcard-hint">Great job! 🎉</div>';
-                document.getElementById('progressBar').style.width = '100%';
-                document.getElementById('progressBar').textContent = 'Complete!';
+        async function initQueue() {
+            console.log('🔄 Loading due cards from API...');
+            
+            try {
+                const response = await api.getDueCards();
+                
+                if (response.success && response.data) {
+                    const dueCards = response.data;
+                    
+                    console.log(`📚 ${dueCards.length} cards due for review today`);
+                    
+                    if (dueCards.length === 0) {
+                        document.getElementById('cardContent').innerHTML = `
+                            <div class="flashcard-front">🎉 All done for today!</div>
+                            <div class="flashcard-hint">Come back tomorrow for more practice</div>
+                        `;
+                        document.getElementById('progressBar').style.width = '100%';
+                        document.getElementById('progressBar').textContent = 'Complete! ✅';
+                        document.getElementById('cardControls').style.display = 'none';
+                        return;
+                    }
+                    
+                    // Convert to flashcard format
+                    cardQueue = dueCards.map(card => ({
+                        id: card.word_id,
+                        front: card.korean,
+                        back: card.meaning,
+                        hint: card.romanization
+                    }));
+                    
+                    // Shuffle
+                    for (let i = cardQueue.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [cardQueue[i], cardQueue[j]] = [cardQueue[j], cardQueue[i]];
+                    }
+                    
+                    currentCard = 0;
+                    flipped = false;
+                    reviewedToday = 0;
+                    correctCount = 0;
+                    totalAttempts = 0;
+                    
+                    loadCard();
+                    document.getElementById('progressBar').textContent = `${cardQueue.length} cards due today`;
+                    
+                } else {
+                    throw new Error('Invalid API response');
+                }
+            } catch (error) {
+                console.error('❌ Failed to load due cards:', error);
+                document.getElementById('cardContent').innerHTML = `
+                    <div class="error-message">
+                        <h3>Failed to Load Cards</h3>
+                        <p>${error.message}</p>
+                        <button class="check-btn" onclick="location.reload()">Try Again</button>
+                    </div>
+                `;
             }
         }
         
@@ -811,11 +872,14 @@
             }
         }
         
-        function showSection(s) {
+        function showSection(s, triggerUpdates = true) {
             document.querySelectorAll('.content-section').forEach(e => e.classList.remove('active'));
             document.querySelectorAll('.nav-btn').forEach(e => e.classList.remove('active'));
             document.getElementById(s).classList.add('active');
             event.target.classList.add('active');
+            // Find the button that corresponds to the section and activate it
+            document.querySelector(`.nav-btn[onclick="showSection('${s}')"]`)?.classList.add('active');
+            if (!triggerUpdates) return;
             if (s === 'vocabulary') {
                 updateProgress();
                 loadVocabularyLessons();
@@ -825,6 +889,7 @@
                 loadProgressFromAPI().then(() => {
                     updateSettingsStats();
                     updateOverallStatistics();
+                    loadScheduleStats(); // ← ADD THIS LINE
                 });
             }
         }
@@ -1052,6 +1117,97 @@
             }
         }
         
+        // NEW: Load schedule stats
+        async function loadScheduleStats() {
+            try {
+                const response = await api.getStats();
+                
+                if (response.success && response.data) {
+                    const stats = response.data;
+                    
+                    const scheduleHTML = `
+                        <h3 style="color: #455936; margin-bottom: 15px;">📅 Review Schedule</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
+                            <div style="background: #fff3cd; padding: 15px; border-radius: 10px; text-align: center;">
+                                <div style="font-size: 2.5em; font-weight: bold; color: #856404;">${stats.due_today || 0}</div>
+                                <div style="font-size: 0.9em; color: #856404;">Due Today</div>
+                            </div>
+                            <div style="background: #d4edda; padding: 15px; border-radius: 10px; text-align: center;">
+                                <div style="font-size: 2.5em; font-weight: bold; color: #155724;">${stats.due_tomorrow || 0}</div>
+                                <div style="font-size: 0.9em; color: #155724;">Due Tomorrow</div>
+                            </div>
+                            <div style="background: #d1ecf1; padding: 15px; border-radius: 10px; text-align: center;">
+                                <div style="font-size: 2.5em; font-weight: bold; color: #0c5460;">${stats.due_this_week || 0}</div>
+                                <div style="font-size: 0.9em; color: #0c5460;">This Week</div>
+                            </div>
+                            <div style="background: #f8d7da; padding: 15px; border-radius: 10px; text-align: center;">
+                                <div style="font-size: 2.5em; font-weight: bold; color: #721c24;">${stats.words_mastered || 0}</div>
+                                <div style="font-size: 0.9em; color: #721c24;">Mastered 🏆</div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    const scheduleContainer = document.getElementById('scheduleStats');
+                    if (scheduleContainer) {
+                        scheduleContainer.innerHTML = scheduleHTML;
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load schedule:', error);
+            }
+        }
+
+        async function practiceMasteredCards() {
+            try {
+                const progressResponse = await api.getProgress();
+                
+                if (!progressResponse.success || !progressResponse.data) {
+                    alert('Failed to load progress');
+                    return;
+                }
+                
+                const masteredWordIds = Object.entries(progressResponse.data)
+                    .filter(([wordId, progress]) => progress.mastered)
+                    .map(([wordId, progress]) => wordId);
+                
+                if (masteredWordIds.length === 0) {
+                    alert('No mastered cards yet! Keep practicing! 💪');
+                    return;
+                }
+                
+                const vocabResponse = await api.getAllVocabulary();
+                
+                if (vocabResponse.success) {
+                    cardQueue = vocabResponse.data
+                        .filter(v => masteredWordIds.includes(String(v.id)))
+                        .map(v => ({
+                            id: v.id,
+                            front: v.korean,
+                            back: v.meaning,
+                            hint: v.romanization
+                        }));
+                    
+                    // Shuffle
+                    for (let i = cardQueue.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [cardQueue[i], cardQueue[j]] = [cardQueue[j], cardQueue[i]];
+                    }
+                    
+                    currentCard = 0;
+                    showSection('flashcards', false); // Don't trigger other loads
+                    loadCard();
+                    
+                    document.getElementById('progressBar').textContent = `🏆 Reviewing ${cardQueue.length} mastered cards`;
+                    document.getElementById('progressBar').style.width = '0%';
+                    
+                    showNotification(`🏆 Practicing ${cardQueue.length} mastered cards!`, 'success');
+                }
+            } catch (error) {
+                alert('Failed to load mastered cards: ' + error.message);
+                console.error('Error in practiceMasteredCards:', error);
+            }
+        }
+
         async function exportProgress() {
             try {
                 const exportData = await api.exportProgress();

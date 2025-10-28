@@ -165,6 +165,13 @@ class KoreanLearningAPI {
     }
 
     /**
+     * Get cards due for review today
+     */
+    async getDueCards() {
+        return await this.request('progress.php?action=due_cards');
+    }
+
+    /**
      * Update progress for a single word
      * FIXED: Properly sends device ID in body
      */
