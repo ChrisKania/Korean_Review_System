@@ -120,8 +120,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $stats = $stmt->fetch(PDO::FETCH_ASSOC);
             
             // Calculate accuracy
-            $accuracy = $stats['total_attempts'] > 0 
-                ? round(($stats['total_correct'] / $stats['total_attempts']) * 100, 1)
+            $accuracy = ($stats['total_attempts'] ?? 0) > 0 
+                ? round((($stats['total_correct'] ?? 0) / $stats['total_attempts']) * 100, 1)
                 : 0;
             
             $stats['accuracy'] = $accuracy;

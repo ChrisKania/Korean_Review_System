@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Korean Review System</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="bibimbap.ico">
     <!-- Load API Client -->
     <script src="js/api-client.js"></script>
     <style>
@@ -1209,23 +1211,59 @@
         }
 
         async function exportProgress() {
-            try {
-                const exportData = await api.exportProgress();
-                const blob = new Blob([JSON.stringify(exportData, null, 2)], {type: 'application/json'});
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'korean-learning-progress-' + new Date().toISOString().split('T')[0] + '.json';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                alert('Progress exported successfully!');
-            } catch (error) {
-                console.error('Export failed:', error);
-                alert('Failed to export progress: ' + error.message);
+                try {
+                    const response = await api.getProgress();
+
+                    if (response.success && response.data) {
+                        // Convert array format to object format
+                        const progressObject = {};
+
+                        if (Array.isArray(response.data)) {
+                            // If data is array, convert it
+                            response.data.forEach(item => {
+                                progressObject[item.word_id] = {
+                                    correct: item.correct_count,
+                                    total: item.total_attempts,
+                                    mastered: item.mastered === 1 || item.mastered === true,
+                                    lastReview: new Date(item.last_reviewed).getTime()
+                                };
+                            });
+                        } else {
+                            // If already object format, use as-is
+                            Object.keys(response.data).forEach(wordId => {
+                                const item = response.data[wordId];
+                                progressObject[wordId] = {
+                                    correct: item.correct || item.correct_count || 0,
+                                    total: item.total || item.total_attempts || 0,
+                                    mastered: item.mastered === 1 || item.mastered === true,
+                                    lastReview: item.lastReview || (item.last_reviewed ? new Date(item.last_reviewed).getTime() : null)
+                                };
+                            });
+                        }
+
+                        const exportData = {
+                            device_id: api.deviceId,
+                            exported_at: new Date().toISOString(),
+                            progress: progressObject
+                        };
+
+                        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'korean-learning-progress-' + new Date().toISOString().split('T')[0] + '.json';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+
+                        showNotification('✅ Progress exported successfully!', 'success');
+                    }
+                } catch (error) {
+                    console.error('Export failed:', error);
+                    showNotification('❌ Failed to export progress: ' + error.message, 'error');
+                }
             }
-        }
         
         async function importProgress() {
             const file = document.getElementById('importFile').files[0];
